@@ -1,8 +1,7 @@
-use std::{fs, ops::Range, thread::current};
-use itertools::{Itertools, Product};
+use std::fs;
 
 fn main() {
-    let file_path = "./input.txt"; 
+    let file_path = "./test.txt"; 
 
     let contents = fs::read_to_string(file_path)
         .unwrap();
