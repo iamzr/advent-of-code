@@ -26,19 +26,23 @@ struct GameConfig {
     prize: (u32, u32),
 }
 
-struct GameMachine {
-    config: GameConfig,
+trait FewestTokensStrategy {
+    fn execute(&self, config: &GameConfig) -> Option<u32>;
 }
 
-impl GameMachine {
-    fn fewest_tokens(&self) -> Option<u32> {
-        let prize = self.config.prize;
-        let mut m = HashMap::new();
-        self.fewest_tokens_from_position(prize, &mut m)
-    }
+struct TopDownMemoizationStrategy {}
 
+impl FewestTokensStrategy for TopDownMemoizationStrategy {
+    fn execute(&self, config: &GameConfig) -> Option<u32> {
+        let prize = config.prize;
+        let mut m = HashMap::new();
+        TopDownMemoizationStrategy::fewest_tokens_from_position(config, prize, &mut m)
+    }
+}
+
+impl TopDownMemoizationStrategy {
     fn fewest_tokens_from_position(
-        &self,
+        config: &GameConfig,
         position: (u32, u32),
         m: &mut HashMap<(u32, u32), Option<u32>>,
     ) -> Option<u32> {
@@ -53,20 +57,24 @@ impl GameMachine {
         // Fpr current position you can either come from an A press or a B press
         //
 
-        let x = position.0.checked_sub(self.config.button_a_delta.0);
-        let y = position.1.checked_sub(self.config.button_a_delta.1);
+        let x = position.0.checked_sub(config.button_a_delta.0);
+        let y = position.1.checked_sub(config.button_a_delta.1);
 
         let tokens_from_a = match (x, y) {
-            (Some(x), Some(y)) => self.fewest_tokens_from_position((x, y), m),
+            (Some(x), Some(y)) => {
+                TopDownMemoizationStrategy::fewest_tokens_from_position(config, (x, y), m)
+            }
             (None, _) => None,
             (_, None) => None,
         };
 
-        let x1 = position.0.checked_sub(self.config.button_b_delta.0);
-        let y2 = position.1.checked_sub(self.config.button_b_delta.1);
+        let x1 = position.0.checked_sub(config.button_b_delta.0);
+        let y2 = position.1.checked_sub(config.button_b_delta.1);
 
         let tokens_from_b = match (x1, y2) {
-            (Some(x), Some(y)) => self.fewest_tokens_from_position((x, y), m),
+            (Some(x), Some(y)) => {
+                TopDownMemoizationStrategy::fewest_tokens_from_position(config, (x, y), m)
+            }
             (None, _) => None,
             (_, None) => None,
         };
@@ -90,13 +98,27 @@ impl GameMachine {
     }
 }
 
+struct GameMachine<T: FewestTokensStrategy> {
+    config: GameConfig,
+    fewest_token_strategy: T,
+}
+
+impl<T: FewestTokensStrategy> GameMachine<T> {
+    fn fewest_tokens(&self) -> Option<u32> {
+        self.fewest_token_strategy.execute(&self.config)
+    }
+}
+
 pub fn part_one(input: &str) -> Option<u32> {
     let configs = parse(input);
 
     let tokens = configs
         .into_iter()
         .map(|c| {
-            let machine = GameMachine { config: c };
+            let machine = GameMachine {
+                config: c,
+                fewest_token_strategy: TopDownMemoizationStrategy {},
+            };
 
             match machine.fewest_tokens() {
                 Some(t) => t,
