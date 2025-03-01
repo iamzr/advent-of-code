@@ -120,10 +120,7 @@ pub fn part_one(input: &str) -> Option<u32> {
                 fewest_token_strategy: TopDownMemoizationStrategy {},
             };
 
-            match machine.fewest_tokens() {
-                Some(t) => t,
-                None => 0,
-            }
+            machine.fewest_tokens().unwrap_or(0)
         })
         .sum();
 
