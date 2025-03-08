@@ -4,7 +4,7 @@ advent_of_code::solution!(19);
 
 fn possible_to_create<'a>(
     pattern: &'a str,
-    towels: &Vec<&str>,
+    towels: &[&str],
     m: &mut HashMap<&'a str, bool>,
 ) -> bool {
     if let Some(v) = m.get(pattern) {
@@ -15,22 +15,11 @@ fn possible_to_create<'a>(
         return true;
     }
 
-    let mut result = false;
-
-    'outer: for towel in towels {
-        for (i, c) in towel.chars().enumerate() {
-            match pattern.chars().nth(i) {
-                Some(p) => {
-                    if c != p {
-                        continue 'outer;
-                    }
-                }
-                None => continue 'outer,
-            }
-        }
-
-        result |= possible_to_create(&pattern[towel.len()..], towels, m);
-    }
+    let result = towels.iter().any(|&towel| {
+        pattern.len() >= towel.len()
+            && pattern.starts_with(towel)
+            && possible_to_create(&pattern[towel.len()..], towels, m)
+    });
 
     m.insert(pattern, result);
 
@@ -38,32 +27,23 @@ fn possible_to_create<'a>(
 }
 
 fn parse(input: &str) -> (Vec<&str>, Vec<&str>) {
-    let mut lines = input.lines();
+    let mut sections = input.split("\n\n");
 
-    let towels = lines.next().unwrap().split(", ").collect();
+    let towels = sections.next().unwrap().split(", ").collect();
+    let patterns = sections.next().unwrap().lines().collect();
 
-    lines.next();
-
-    let lines = lines.collect();
-
-    (towels, lines)
+    (towels, patterns)
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
     let (towels, patterns) = parse(input);
 
-    let mut total = 0;
-
-    for pattern in patterns {
-        let mut m = HashMap::new();
-        let result = possible_to_create(pattern, &towels, &mut m);
-
-        if result {
-            total += 1
-        };
-    }
-
-    Some(total)
+    Some(
+        patterns
+            .iter()
+            .filter(|p| possible_to_create(p, &towels, &mut HashMap::new()))
+            .count() as u32,
+    )
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
