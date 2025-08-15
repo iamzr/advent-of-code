@@ -1,63 +1,47 @@
 advent_of_code::solution!(25);
-use itertools;
 
-#[derive(Clone)]
-struct Schematic {
-    pins: Vec<usize>,
-}
-
-enum Parts {
-    Key(Schematic),
-    Lock(Schematic),
-}
+type Schematic = [usize; 5];
 
 fn parse(input: &str) -> (Vec<Schematic>, Vec<Schematic>) {
-    let (keys, locks): (Vec<Schematic>, Vec<Schematic>) = input
-        .split("\n\n")
-        .map(|chunk| chunk.lines().map(|l| l.chars().collect()).collect())
-        .map(|chunk: Vec<Vec<char>>| {
-            let pins: Vec<usize> = (0..chunk[0].len())
-                .map(|c| chunk.iter().filter(|row| row[c] == '#').count())
-                .collect();
+    let (keys, locks): (Vec<Schematic>, Vec<Schematic>) =
+        input
+            .split("\n\n")
+            .fold((vec![], vec![]), |(mut ks, mut ls), chunk| {
+                let pins = chunk
+                    .chars()
+                    .filter(|c| *c == '#' || *c == '.')
+                    .enumerate()
+                    .fold([0; 5], |mut acc, (i, c)| {
+                        if c == '#' {
+                            acc[i % 5] += 1
+                        }
+                        acc
+                    });
 
-            if chunk[0].contains(&'.') {
-                Parts::Key(Schematic { pins: pins })
-            } else {
-                Parts::Lock(Schematic { pins: pins })
-            }
-        })
-        .fold((vec![], vec![]), |(mut ks, mut ls), item| {
-            match item {
-                Parts::Key(k) => ks.push(k),
-                Parts::Lock(l) => ls.push(l),
-            };
-            (ks, ls)
-        });
+                if &chunk[0..5] != "#####" {
+                    ks.push(pins)
+                } else {
+                    ls.push(pins)
+                }
+                (ks, ls)
+            });
 
-    return (keys, locks);
+    (keys, locks)
 }
 
-fn find_combos(keys: Vec<Schematic>, locks: Vec<Schematic>) -> u32 {
-    let mut result = 0;
-    for (k, l) in itertools::iproduct!(keys, locks) {
-        let complete_pins = k
-            .pins
-            .iter()
-            .zip(l.pins.iter())
-            .filter(|(&kp, &lp)| (kp + lp <= 7))
-            .count();
-
-        if complete_pins == 5 {
-            result += 1;
-        }
-    }
-
-    result
+fn find_combos(keys: &Vec<Schematic>, locks: &Vec<Schematic>) -> u32 {
+    keys.iter()
+        .flat_map(|k| {
+            locks
+                .iter()
+                .filter(move |l| k.iter().zip(l.iter()).all(|(&kp, &lp)| kp + lp <= 7))
+        })
+        .count() as u32
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
     let (keys, locks) = parse(input);
-    let combos = find_combos(keys, locks);
+    let combos = find_combos(&keys, &locks);
 
     Some(combos)
 }
@@ -76,6 +60,9 @@ mod tests {
 
         assert_eq!(keys.len(), 3);
         assert_eq!(locks.len(), 2);
+
+        assert_eq!(locks[0], [1, 6, 4, 5, 4]);
+        assert_eq!(keys[0], [6, 1, 3, 2, 4]);
     }
 
     #[test]
