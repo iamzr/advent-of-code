@@ -31,9 +31,7 @@ fn calculate_accessible_rolls(data: &Vec<Vec<u8>>) -> u64 {
         }
     }
     accessible_rolls
-    }
-
-
+}
 
 fn is_accessible_roll(data: &Vec<Vec<u8>>, row: usize, column: usize) -> bool {
     static DELTAS: &[(isize, isize); 8] = &[
@@ -60,11 +58,11 @@ fn is_accessible_roll(data: &Vec<Vec<u8>>, row: usize, column: usize) -> bool {
         };
 
         if data.get(y).and_then(|r| r.get(x)) == Some(&b'@') {
-                adjacent_rolls += 1;
-                if adjacent_rolls >= 4 {
-                    return false;
-                }
+            adjacent_rolls += 1;
+            if adjacent_rolls >= 4 {
+                return false;
             }
+        }
     }
 
     true
@@ -89,8 +87,7 @@ fn prune_accessible_rolls(data: &mut Vec<Vec<u8>>) -> u64 {
         }
     }
 
-    return accessible_rolls
-
+    return accessible_rolls;
 }
 
 pub fn part_two(input: &str) -> Option<u64> {

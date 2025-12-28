@@ -31,7 +31,9 @@ fn get_jolt<const WINDOW_SIZE: usize>(batteries: Vec<u64>) -> u64 {
 
     for battery in batteries {
         while to_remove > 0 {
-            if let Some(&last) = stack.last() && last < battery {
+            if let Some(&last) = stack.last()
+                && last < battery
+            {
                 stack.pop();
                 to_remove -= 1;
             } else {
@@ -40,18 +42,16 @@ fn get_jolt<const WINDOW_SIZE: usize>(batteries: Vec<u64>) -> u64 {
         }
 
         stack.push(battery);
-
     }
 
     stack.truncate(WINDOW_SIZE);
 
     let l = stack.len();
     if l != WINDOW_SIZE {
-        panic!("Stack length is {} should be 12",l )
+        panic!("Stack length is {} should be 12", l)
     }
 
     stack.iter().fold(0, |acc, &d| acc * 10 + d)
-
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
