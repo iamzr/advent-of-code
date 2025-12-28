@@ -1,24 +1,35 @@
 advent_of_code::solution!(4);
 
-struct Matrix<T> {
-    data: Vec<Vec<T>>,
-}
-
-impl<T> Matrix<T> {
-    fn get(&self, x: usize, y: usize) -> Option<&T> {
-        self.data.get(y)?.get(x)
-    }
-}
-
 pub fn part_one(input: &str) -> Option<u64> {
-    let input = input
+    let input: Vec<&[u8]> = input
         .lines()
-        .map(|l| l.chars().collect())
-        .collect::<Vec<Vec<char>>>();
+        .map(|l| l.as_bytes()) // Use bytes instead of char because it's faster
+        .collect();
 
-    let data = Matrix { data: input };
+    let data = input;
 
-    let deltas: Vec<(isize, isize)> = vec![
+    let mut accessible_rolls = 0;
+
+    let m = data.len();
+    let n = data[0].len();
+
+    for row in 0..m {
+        for column in 0..n {
+            if data[row][column] != b'@' {
+                continue;
+            }
+
+            if is_accessible_roll(&data, row, column) {
+                accessible_rolls += 1;
+            }
+        }
+    }
+
+    Some(accessible_rolls)
+}
+
+fn is_accessible_roll(data: &Vec<&[u8]>, row: usize, column: usize) -> bool {
+    static DELTAS: &[(isize, isize); 8] = &[
         (-1, -1),
         (0, -1),
         (1, -1),
@@ -29,43 +40,27 @@ pub fn part_one(input: &str) -> Option<u64> {
         (-1, 1),
     ];
 
-    let mut accessible_rolls = 0;
+    let mut adjacent_rolls = 0;
+    for &(dx, dy) in DELTAS {
+        let x = match column.checked_add_signed(dx) {
+            Some(v) => v,
+            None => continue,
+        };
 
-    let m = data.data.len();
-    let n = data.data[0].len();
+        let y = match row.checked_add_signed(dy) {
+            Some(v) => v,
+            None => continue,
+        };
 
-    for row in 0..m {
-        for column in 0..n {
-            match data.get(column, row) {
-                Some('@') => {}
-                _ => continue,
-            }
-
-            let mut adjacent_rolls = 0;
-            for delta in &deltas {
-                let y = match row.checked_add_signed(delta.1) {
-                    Some(v) => v,
-                    None => continue,
-                };
-
-                let x = match column.checked_add_signed(delta.0) {
-                    Some(v) => v,
-                    None => continue,
-                };
-
-                match data.get(x, y) {
-                    Some('@') => adjacent_rolls += 1,
-                    _ => {}
+        if data.get(y).and_then(|r| r.get(x)) == Some(&b'@') {
+                adjacent_rolls += 1;
+                if adjacent_rolls >= 4 {
+                    return false;
                 }
             }
-
-            if adjacent_rolls < 4 {
-                accessible_rolls += 1;
-            }
-        }
     }
 
-    Some(accessible_rolls)
+    true
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
