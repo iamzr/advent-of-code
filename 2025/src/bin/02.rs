@@ -1,17 +1,4 @@
-use std::{collections::HashSet, str::FromStr};
-
 advent_of_code::solution!(2);
-
-fn parse_number<T>(input: &str) -> Option<T>
-where
-    T: FromStr,
-{
-    if input.starts_with("0") {
-        return None;
-    }
-
-    input.parse::<T>().ok()
-}
 
 fn is_valid_id(id: u64) -> bool {
     let s = id.to_string();
@@ -32,16 +19,13 @@ pub fn part_one(input: &str) -> Option<u64> {
         .filter_map(|s| {
             let r = s.split_once("-").unwrap();
 
-            let start = (parse_number::<u64>(r.0)?, parse_number::<u64>(r.1)?);
-
-            println!("range {}-{}", start.0, start.1);
+            let start = (r.0.parse::<u64>().unwrap(), r.1.parse::<u64>().unwrap());
 
             Some(start.0..start.1 + 1)
         })
         .flatten()
         .fold(0, |mut acc, id| {
             if !is_valid_id(id) {
-                println!("{}", id);
                 acc += id;
             }
             acc
