@@ -1,102 +1,124 @@
 advent_of_code::solution!(12);
 
+use std::str::FromStr;
+
+#[derive(Clone, Copy)]
+struct Shape(u16); // 3x3 bitmask
+
+impl Shape {
+    fn area(self) -> usize {
+        self.0.count_ones() as usize
+    }
+}
+
+impl FromStr for Shape {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut mask = 0u16;
+        for (y, line) in s.lines().skip(1).enumerate() {
+            for (x, c) in line.bytes().enumerate() {
+                if c == b'#' {
+                    mask |= 1 << (y * 3 + x);
+                }
+            }
+        }
+        Ok(Shape(mask))
+    }
+}
+
 struct Problem {
-    length: usize,
     width: usize,
-
-    // the number for each shape
-    presents: HashMap<&Shape, usize>,
+    height: usize,
+    counts: Vec<usize>, // counts[i] = how many of shape i
 }
 
-impl Problem {
-    fn area_available(&self) -> usize {
-        self.length * self.width
+impl FromStr for Problem {
+    type Err = ();
+    fn from_str(line: &str) -> Result<Self, ()> {
+        let (dims, counts) = line.split_once(": ").ok_or(())?;
+        let (w, h) = dims.split_once('x').ok_or(())?;
+        Ok(Problem {
+            width: w.parse().map_err(|_| ())?,
+            height: h.parse().map_err(|_| ())?,
+            counts: counts
+                .split(' ')
+                .map(|n| n.parse().map_err(|_| ()))
+                .collect::<Result<_, _>>()?,
+        })
     }
+}
 
-    fn area_of_shapes(&self) -> usize {
-        self.presents
+struct Puzzle {
+    shapes: Vec<Shape>,
+    problems: Vec<Problem>,
+}
+
+impl FromStr for Puzzle {
+    type Err = ();
+    fn from_str(input: &str) -> Result<Self, ()> {
+        let (shapes, problems) = input.trim().rsplit_once("\n\n").ok_or(())?;
+        Ok(Puzzle {
+            shapes: shapes
+                .split("\n\n")
+                .map(str::parse)
+                .collect::<Result<_, _>>()?,
+            problems: problems.lines().map(str::parse).collect::<Result<_, _>>()?,
+        })
+    }
+}
+
+impl Puzzle {
+    fn fits(&self, p: &Problem, packer: &impl PackingFinder) -> bool {
+        let needed: usize = p
+            .counts
             .iter()
-            .map(|(shape, count)| shape.area * count)
-            .sum()
-    }
+            .zip(&self.shapes)
+            .map(|(n, s)| n * s.area())
+            .sum();
 
-    fn non_overlapping_boxes(&self) -> usize {
-        (self.length / 3) * (self.width / 3)
-    }
-}
+        if needed > p.width * p.height {
+            return false;
+        }
 
-struct Shape {
-    area: usize,
+        let total: usize = p.counts.iter().sum();
+
+        if (p.width / 3) * (p.height / 3) >= total {
+            return true;
+        }
+
+        packer.pack(&self.shapes, p)
+    }
 }
 
 trait PackingFinder {
-    fn pack(region: &Problem) -> bool;
+    fn pack(&self, shapes: &[Shape], problem: &Problem) -> bool;
 }
 
 struct AutoRejectPackingFinder;
 
 impl PackingFinder for AutoRejectPackingFinder {
-    fn pack(region: &Problem) -> bool {
+    fn pack(&self, shapes: &[Shape], problem: &Problem) -> bool {
         false
     }
 }
 
-fn parse(input: &str) -> (Vec<Problem>, Vec<Shape>) {
-    let (shapes_input, tree_input) = input.rsplit_once("\n\n").unwrap();
-
-    let shapes = shape_part
-        .split("\n\n")
-        .map(|block| {
-            let mut mask = 0u16;
-            // skip the "0:" header line
-            for (y, line) in block.lines().skip(1).enumerate() {
-                for (x, c) in line.bytes().enumerate() {
-                    if c == b'#' {
-                        mask |= 1 << (y * 3 + x);
-                    }
-                }
-            }
-            mask
-        })
-        .collect();
-
-    let problems = problem_part
-        .lines()
-        .map(|line| {
-            let (dims, counts) = line.split_once(": ").unwrap();
-            let (w, h) = dims.split_once('x').unwrap();
-            let mut it = counts.split(' ').map(|n| n.parse().unwrap());
-            Problem {
-                width: w.parse().unwrap(),
-                height: h.parse().unwrap(),
-                counts: std::array::from_fn(|_| it.next().unwrap()),
-            }
-        })
-        .collect();
-
-    (problems, shapes)
-}
-
-///
 /// For this problem, there's no clear algoirthm on we can reach for.
 ///
 /// My method here:
 /// 1. Check if there's sufficient space to fit the presents. If not, return False, else continue.
 /// 2. The presents are 3x3, so check if there's sufficient space to fit non-overlapping 3x3 boxes.
 ///    Then True, else continue.
-/// 3. If there's
+/// 3. At this point, it means that a tight packing is required, so we'll have to use some method to
+///    find the necessary packing.
 pub fn part_one(input: &str) -> Option<u64> {
-    let (problems, shapes) = parse(input);
+    let puzzle: Puzzle = input.parse().ok()?;
+    let packer = AutoRejectPackingFinder;
 
-    let packing_finder = AutoRejectPackingFinder;
-
-    let count = problems
+    let count = puzzle
+        .problems
         .iter()
-        .filter(|problem| problem.area_available() >= problem.area_of_shapes())
-        .filter(|problem| {
-            problem.non_overlapping_boxes() >= problem.shapes.values().sum()
-                || packing_finder.pack(problem)
-        })
+        .filter(|p| puzzle.fits(p, &packer))
         .count();
 
     Some(count as u64)
